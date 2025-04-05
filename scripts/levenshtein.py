@@ -16,41 +16,49 @@
 
 # file: levenshtein.py
 
-from optparse import OptionParser
-from itertools import izip
-from util import uniq
-import re
 import sys
 from copy import deepcopy
 
+
 # batch evaluation of a list of sentences
-def batch_precision(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False, verbose=False):
-    return batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[0]
+def batch_precision(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False,
+                    verbose=False):
+    return \
+    batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[0]
 
-def batch_recall(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False, verbose=False):
-    return batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[1]
 
-def batch_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False, verbose=False):
-    return batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[2]
+def batch_recall(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False,
+                 verbose=False):
+    return \
+    batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[1]
+
+
+def batch_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False,
+             verbose=False):
+    return \
+    batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words, beta, ignore_whitespace_casing, verbose)[2]
+
 
 def comp_p(a, b):
     try:
-        p  = a / b
+        p = a / b
     except ZeroDivisionError:
         p = 1.0
     return p
 
+
 def comp_r(c, g):
     try:
-        r  = c / g
+        r = c / g
     except ZeroDivisionError:
         r = 1.0
     return r
 
+
 def comp_f1(c, e, g, b):
     try:
-        f = (1+b*b) * c / (b*b*g+e)
-        #f = 2 * c / (g+e)
+        f = (1 + b * b) * c / (b * b * g + e)
+        # f = 2 * c / (g+e)
     except ZeroDivisionError:
         if c == 0.0:
             f = 1.0
@@ -58,7 +66,9 @@ def comp_f1(c, e, g, b):
             f = 0.0
     return f
 
-def f1_suffstats(candidate, source, gold_edits, max_unchanged_words=2, ignore_whitespace_casing= False, verbose=False, very_verbose=False):
+
+def f1_suffstats(candidate, source, gold_edits, max_unchanged_words=2, ignore_whitespace_casing=False, verbose=False,
+                 very_verbose=False):
     stat_correct = 0.0
     stat_proposed = 0.0
     stat_gold = 0.0
@@ -67,39 +77,41 @@ def f1_suffstats(candidate, source, gold_edits, max_unchanged_words=2, ignore_wh
     source_tok = source.split()
     lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
     V, E, dist, edits = edit_graph(lmatrix, backpointers)
-    if very_verbose:
-        print "edit matrix:", lmatrix
-        print "backpointers:", backpointers
-        print "edits (w/o transitive arcs):", edits
+    # if very_verbose:
+    #     print "edit matrix:", lmatrix
+    #     print "backpointers:", backpointers
+    #     print "edits (w/o transitive arcs):", edits
     V, E, dist, edits = transitive_arcs(V, E, dist, edits, max_unchanged_words, very_verbose)
     dist = set_weights(E, dist, edits, gold_edits, very_verbose)
     editSeq = best_edit_seq_bf(V, E, dist, edits, very_verbose)
-    if very_verbose:
-        print "Graph(V,E) = "
-        print "V =", V
-        print "E =", E
-        print "edits (with transitive arcs):", edits
-        print "dist() =", dist
-        print "viterbi path =", editSeq
+    # if very_verbose:
+    #     print "Graph(V,E) = "
+    #     print "V =", V
+    #     print "E =", E
+    #     print "edits (with transitive arcs):", edits
+    #     print "dist() =", dist
+    #     print "viterbi path =", editSeq
     if ignore_whitespace_casing:
-        editSeq = filter(lambda x : not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
+        editSeq = filter(lambda x: not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
     correct = matchSeq(editSeq, gold_edits, ignore_whitespace_casing)
     stat_correct = len(correct)
     stat_proposed = len(editSeq)
     stat_gold = len(gold_edits)
     if verbose:
-        print "SOURCE        :", source.encode("utf8")
-        print "HYPOTHESIS    :", candidate.encode("utf8")
-        print "EDIT SEQ      :", list(reversed(editSeq))
-        print "GOLD EDITS    :", gold_edits
-        print "CORRECT EDITS :", correct
-        print "# correct     :", int(stat_correct)
-        print "# proposed    :", int(stat_proposed)
-        print "# gold        :", int(stat_gold)
-        print "-------------------------------------------"
-    return (stat_correct, stat_proposed, stat_gold)
+        print("SOURCE        :", source.encode("utf8"))
+        print("HYPOTHESIS    :", candidate.encode("utf8"))
+        print("EDIT SEQ      :", list(reversed(editSeq)))
+        print("GOLD EDITS    :", gold_edits)
+        print("CORRECT EDITS :", correct)
+        print("# correct     :", int(stat_correct))
+        print("# proposed    :", int(stat_proposed))
+        print("# gold        :", int(stat_gold))
+        print("-------------------------------------------")
+    return stat_correct, stat_proposed, stat_gold
 
-def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing= False, verbose=False, very_verbose=False):
+
+def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5,
+                           ignore_whitespace_casing=False, verbose=False, very_verbose=False):
     assert len(candidates) == len(sources) == len(gold_edits)
     stat_correct = 0.0
     stat_proposed = 0.0
@@ -110,21 +122,21 @@ def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=
         # Candidate system edit extraction
         candidate_tok = candidate.split()
         source_tok = source.split()
-        #lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
+        # lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
         lmatrix1, backpointers1 = levenshtein_matrix(source_tok, candidate_tok, 1, 1, 1)
         lmatrix2, backpointers2 = levenshtein_matrix(source_tok, candidate_tok, 1, 1, 2)
 
-        #V, E, dist, edits = edit_graph(lmatrix, backpointers)
+        # V, E, dist, edits = edit_graph(lmatrix, backpointers)
         V1, E1, dist1, edits1 = edit_graph(lmatrix1, backpointers1)
         V2, E2, dist2, edits2 = edit_graph(lmatrix2, backpointers2)
 
         V, E, dist, edits = merge_graph(V1, V2, E1, E2, dist1, dist2, edits1, edits2)
-        if very_verbose:
-            print "edit matrix 1:", lmatrix1
-            print "edit matrix 2:", lmatrix2
-            print "backpointers 1:", backpointers1
-            print "backpointers 2:", backpointers2
-            print "edits (w/o transitive arcs):", edits
+        # if very_verbose:
+        #     print "edit matrix 1:", lmatrix1
+        #     print "edit matrix 2:", lmatrix2
+        #     print "backpointers 1:", backpointers1
+        #     print "backpointers 2:", backpointers2
+        #     print "edits (w/o transitive arcs):", edits
         V, E, dist, edits = transitive_arcs(V, E, dist, edits, max_unchanged_words, very_verbose)
 
         # Find measures maximizing current cumulative F1; local: curent annotator only
@@ -142,16 +154,16 @@ def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=
             localdist = set_weights(E, dist, edits, gold, verbose, very_verbose)
             editSeq = best_edit_seq_bf(V, E, localdist, edits, very_verbose)
             if verbose:
-                print ">> Annotator:", annotator
-            if very_verbose:
-                print "Graph(V,E) = "
-                print "V =", V
-                print "E =", E
-                print "edits (with transitive arcs):", edits
-                print "dist() =", localdist
-                print "viterbi path =", editSeq
+                print(">> Annotator:", annotator)
+            # if very_verbose:
+            #     print "Graph(V,E) = "
+            #     print "V =", V
+            #     print "E =", E
+            #     print "edits (with transitive arcs):", edits
+            #     print "dist() =", localdist
+            #     print "viterbi path =", editSeq
             if ignore_whitespace_casing:
-                editSeq = filter(lambda x : not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
+                editSeq = filter(lambda x: not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
             correct = matchSeq(editSeq, gold, ignore_whitespace_casing, verbose)
 
             # local cumulative counts, P, R and F1
@@ -163,8 +175,9 @@ def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=
             f1_local = comp_f1(stat_correct_local, stat_proposed_local, stat_gold_local, beta)
 
             if f1_max < f1_local or \
-              (f1_max == f1_local and max_stat_correct < stat_correct_local) or \
-              (f1_max == f1_local and max_stat_correct == stat_correct_local and min_stat_proposed + sqbeta * min_stat_gold > stat_proposed_local + sqbeta * stat_gold_local):
+                    (f1_max == f1_local and max_stat_correct < stat_correct_local) or \
+                    (
+                            f1_max == f1_local and max_stat_correct == stat_correct_local and min_stat_proposed + sqbeta * min_stat_gold > stat_proposed_local + sqbeta * stat_gold_local):
                 chosen_ann = annotator
                 f1_max = f1_local
                 max_stat_correct = stat_correct_local
@@ -175,49 +188,50 @@ def batch_multi_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=
                 argmax_gold = len(gold)
 
             if verbose:
-                print "SOURCE        :", source.encode("utf8")
-                print "HYPOTHESIS    :", candidate.encode("utf8")
-                print "EDIT SEQ      :", [shrinkEdit(ed) for ed in list(reversed(editSeq))]
-                print "GOLD EDITS    :", gold
-                print "CORRECT EDITS :", correct
-                print "# correct     :", int(stat_correct_local)
-                print "# proposed    :", int(stat_proposed_local)
-                print "# gold        :", int(stat_gold_local)
-                print "precision     :", p_local
-                print "recall        :", r_local
-                print "f_%.1f         :" % beta, f1_local
-                print "-------------------------------------------"
+                print("SOURCE        :", source.encode("utf8"))
+                print("HYPOTHESIS    :", candidate.encode("utf8"))
+                print("EDIT SEQ      :", [shrinkEdit(ed) for ed in list(reversed(editSeq))])
+                print("GOLD EDITS    :", gold)
+                print("CORRECT EDITS :", correct)
+                print("# correct     :", int(stat_correct_local))
+                print("# proposed    :", int(stat_proposed_local))
+                print("# gold        :", int(stat_gold_local))
+                print("precision     :", p_local)
+                print("recall        :", r_local)
+                print("f_%.1f         :" % beta, f1_local)
+                print("-------------------------------------------")
         if verbose:
-            print ">> Chosen Annotator for line", i, ":", chosen_ann
-            print ""
+            print(">> Chosen Annotator for line", i, ":", chosen_ann)
+            print()
         stat_correct += argmax_correct
         stat_proposed += argmax_proposed
         stat_gold += argmax_gold
 
     try:
-        p  = stat_correct / stat_proposed
+        p = stat_correct / stat_proposed
     except ZeroDivisionError:
         p = 1.0
 
     try:
-        r  = stat_correct / stat_gold
+        r = stat_correct / stat_gold
     except ZeroDivisionError:
         r = 1.0
     try:
-        f1 = (1.0+beta*beta) * p * r / (beta*beta*p+r)
+        f1 = (1.0 + beta * beta) * p * r / (beta * beta * p + r)
     except ZeroDivisionError:
         f1 = 0.0
     if verbose:
-        print "CORRECT EDITS  :", int(stat_correct)
-        print "PROPOSED EDITS :", int(stat_proposed)
-        print "GOLD EDITS     :", int(stat_gold)
-        print "P =", p
-        print "R =", r
-        print "F_%.1f =" % beta, f1
-    return (p, r, f1)
+        print("CORRECT EDITS  :", int(stat_correct))
+        print("PROPOSED EDITS :", int(stat_proposed))
+        print("GOLD EDITS     :", int(stat_gold))
+        print("P =", p)
+        print("R =", r)
+        print("F_%.1f =" % beta, f1)
+    return p, r, f1
 
 
-def batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing= False, verbose=False, very_verbose=False):
+def batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False,
+                     verbose=False, very_verbose=False):
     assert len(candidates) == len(sources) == len(gold_edits)
     stat_correct = 0.0
     stat_proposed = 0.0
@@ -228,71 +242,75 @@ def batch_pre_rec_f1(candidates, sources, gold_edits, max_unchanged_words=2, bet
         lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
         V, E, dist, edits = edit_graph(lmatrix, backpointers)
         if very_verbose:
-            print "edit matrix:", lmatrix
-            print "backpointers:", backpointers
-            print "edits (w/o transitive arcs):", edits
+            print("edit matrix:", lmatrix)
+            print("backpointers:", backpointers)
+            print("edits (w/o transitive arcs):", edits)
         V, E, dist, edits = transitive_arcs(V, E, dist, edits, max_unchanged_words, very_verbose)
         dist = set_weights(E, dist, edits, gold, verbose, very_verbose)
         editSeq = best_edit_seq_bf(V, E, dist, edits, very_verbose)
-        if very_verbose:
-            print "Graph(V,E) = "
-            print "V =", V
-            print "E =", E
-            print "edits (with transitive arcs):", edits
-            print "dist() =", dist
-            print "viterbi path =", editSeq
+        # if very_verbose:
+        #     print "Graph(V,E) = "
+        #     print "V =", V
+        #     print "E =", E
+        #     print "edits (with transitive arcs):", edits
+        #     print "dist() =", dist
+        #     print "viterbi path =", editSeq
         if ignore_whitespace_casing:
-            editSeq = filter(lambda x : not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
+            editSeq = filter(lambda x: not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
         correct = matchSeq(editSeq, gold, ignore_whitespace_casing)
         stat_correct += len(correct)
         stat_proposed += len(editSeq)
         stat_gold += len(gold)
         if verbose:
-            print "SOURCE        :", source.encode("utf8")
-            print "HYPOTHESIS    :", candidate.encode("utf8")
-            print "EDIT SEQ      :", list(reversed(editSeq))
-            print "GOLD EDITS    :", gold
-            print "CORRECT EDITS :", correct
-            print "# correct     :", stat_correct
-            print "# proposed    :", stat_proposed
-            print "# gold        :", stat_gold
-            print "precision     :", comp_p(stat_correct, stat_proposed)
-            print "recall        :", comp_r(stat_correct, stat_gold)
-            print "f_%.1f          :" % beta, comp_f1(stat_correct, stat_proposed, stat_gold, beta)
-            print "-------------------------------------------"
+            print("SOURCE        :", source.encode("utf8"))
+            print("HYPOTHESIS    :", candidate.encode("utf8"))
+            print("EDIT SEQ      :", list(reversed(editSeq)))
+            print("GOLD EDITS    :", gold)
+            print("CORRECT EDITS :", correct)
+            print("# correct     :", stat_correct)
+            print("# proposed    :", stat_proposed)
+            print("# gold        :", stat_gold)
+            print("precision     :", comp_p(stat_correct, stat_proposed))
+            print("recall        :", comp_r(stat_correct, stat_gold))
+            print("f_%.1f          :" % beta, comp_f1(stat_correct, stat_proposed, stat_gold, beta))
+            print("-------------------------------------------")
 
     try:
-        p  = stat_correct / stat_proposed
+        p = stat_correct / stat_proposed
     except ZeroDivisionError:
         p = 1.0
 
     try:
-        r  = stat_correct / stat_gold
+        r = stat_correct / stat_gold
     except ZeroDivisionError:
         r = 1.0
     try:
-        f1 = (1.0+beta*beta) * p * r / (beta*beta*p+r)
-        #f1  = 2.0 * p * r / (p+r)
+        f1 = (1.0 + beta * beta) * p * r / (beta * beta * p + r)
+        # f1  = 2.0 * p * r / (p+r)
     except ZeroDivisionError:
         f1 = 0.0
     if verbose:
-        print "CORRECT EDITS  :", stat_correct
-        print "PROPOSED EDITS :", stat_proposed
-        print "GOLD EDITS     :", stat_gold
-        print "P =", p
-        print "R =", r
-        print "F_%.1f =" % beta, f1
-    return (p, r, f1)
+        print("CORRECT EDITS  :", stat_correct)
+        print("PROPOSED EDITS :", stat_proposed)
+        print("GOLD EDITS     :", stat_gold)
+        print("P =", p)
+        print("R =", r)
+        print("F_%.1f =" % beta, f1)
+    return p, r, f1
+
 
 # precision, recall, F1
 def precision(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, verbose=False):
     return pre_rec_f1(candidate, source, gold_edits, max_unchanged_words, beta, verbose)[0]
 
+
 def recall(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, verbose=False):
     return pre_rec_f1(candidate, source, gold_edits, max_unchanged_words, beta, verbose)[1]
 
+
 def f1(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, verbose=False):
     return pre_rec_f1(candidate, source, gold_edits, max_unchanged_words, beta, verbose)[2]
+
 
 def shrinkEdit(edit):
     shrunkEdit = deepcopy(edit)
@@ -316,10 +334,12 @@ def shrinkEdit(edit):
         else:
             cend -= 1
             j += 1
-    shrunkEdit = (edit[0] + i, edit[1] - (j-1), ' '.join(origtok[i : len(origtok)-(j-1)]), ' '.join(corrtok[i : len(corrtok)-(j-1)]))
+    shrunkEdit = (edit[0] + i, edit[1] - (j - 1), ' '.join(origtok[i: len(origtok) - (j - 1)]),
+                  ' '.join(corrtok[i: len(corrtok) - (j - 1)]))
     return shrunkEdit
 
-def matchSeq(editSeq, gold_edits, ignore_whitespace_casing= False, verbose=False):
+
+def matchSeq(editSeq, gold_edits, ignore_whitespace_casing=False, verbose=False):
     m = []
     goldSeq = deepcopy(gold_edits)
     last_index = 0
@@ -329,9 +349,9 @@ def matchSeq(editSeq, gold_edits, ignore_whitespace_casing= False, verbose=False
     for e in reversed(editSeq):
         for i in range(last_index, len(goldSeq)):
             g = goldSeq[i]
-            if matchEdit(e,g, ignore_whitespace_casing):
+            if matchEdit(e, g, ignore_whitespace_casing):
                 m.append(e)
-                last_index = i+1
+                last_index = i + 1
                 if verbose:
                     nextEditList = [shrinkEdit(edit) for edit in editSeq if e[1] == edit[0]]
                     prevEditList = [shrinkEdit(edit) for edit in editSeq if e[0] == edit[1]]
@@ -343,23 +363,26 @@ def matchSeq(editSeq, gold_edits, ignore_whitespace_casing= False, verbose=False
                         nextEditList = [edit for edit in nextEditList if edit[0] < edit[1] and edit[3] == '']
                         prevEditList = [edit for edit in prevEditList if edit[0] < edit[1] and edit[3] == '']
 
-                    matchAdj = any(any(matchEdit(edit, gold, ignore_whitespace_casing) for gold in goldSeq) for edit in nextEditList) or \
-                        any(any(matchEdit(edit, gold, ignore_whitespace_casing) for gold in goldSeq) for edit in prevEditList)
+                    matchAdj = any(any(matchEdit(edit, gold, ignore_whitespace_casing) for gold in goldSeq) for edit in
+                                   nextEditList) or \
+                               any(any(matchEdit(edit, gold, ignore_whitespace_casing) for gold in goldSeq) for edit in
+                                   prevEditList)
                     if e[0] < e[1] and len(e[3].strip()) == 0 and \
-                        (len(nextEditList) > 0 or len(prevEditList) > 0):
+                            (len(nextEditList) > 0 or len(prevEditList) > 0):
                         if matchAdj:
-                            print "!", e
+                            print("!", e)
                         else:
-                            print "&", e
+                            print("&", e)
                     elif e[0] == e[1] and \
-                        (len(nextEditList) > 0 or len(prevEditList) > 0):
+                            (len(nextEditList) > 0 or len(prevEditList) > 0):
                         if matchAdj:
-                            print "!", e
+                            print("!", e)
                         else:
-                            print "*", e
+                            print("*", e)
     return m
 
-def matchEdit(e, g, ignore_whitespace_casing= False):
+
+def matchEdit(e, g, ignore_whitespace_casing=False):
     # start offset
     if e[0] != g[0]:
         return False
@@ -375,11 +398,13 @@ def matchEdit(e, g, ignore_whitespace_casing= False):
     # all matches
     return True
 
-def equals_ignore_whitespace_casing(a,b):
+
+def equals_ignore_whitespace_casing(a, b):
     return a.replace(" ", "").lower() == b.replace(" ", "").lower()
 
 
-def get_edits(candidate, source, gold_edits, max_unchanged_words=2, ignore_whitespace_casing= False, verbose=False, very_verbose=False):
+def get_edits(candidate, source, gold_edits, max_unchanged_words=2, ignore_whitespace_casing=False, verbose=False,
+              very_verbose=False):
     candidate_tok = candidate.split()
     source_tok = source.split()
     lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
@@ -388,11 +413,13 @@ def get_edits(candidate, source, gold_edits, max_unchanged_words=2, ignore_white
     dist = set_weights(E, dist, edits, gold_edits, verbose, very_verbose)
     editSeq = best_edit_seq_bf(V, E, dist, edits)
     if ignore_whitespace_casing:
-        editSeq = filter(lambda x : not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
+        editSeq = filter(lambda x: not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
     correct = matchSeq(editSeq, gold_edits)
-    return (correct, editSeq, gold_edits)
+    return correct, editSeq, gold_edits
 
-def pre_rec_f1(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing= False, verbose=False, very_verbose=False):
+
+def pre_rec_f1(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, ignore_whitespace_casing=False,
+               verbose=False, very_verbose=False):
     candidate_tok = candidate.split()
     source_tok = source.split()
     lmatrix, backpointers = levenshtein_matrix(source_tok, candidate_tok)
@@ -401,31 +428,32 @@ def pre_rec_f1(candidate, source, gold_edits, max_unchanged_words=2, beta=0.5, i
     dist = set_weights(E, dist, edits, gold_edits, verbose, very_verbose)
     editSeq = best_edit_seq_bf(V, E, dist, edits)
     if ignore_whitespace_casing:
-        editSeq = filter(lambda x : not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
+        editSeq = filter(lambda x: not equals_ignore_whitespace_casing(x[2], x[3]), editSeq)
     correct = matchSeq(editSeq, gold_edits)
     try:
-        p  = float(len(correct)) / len(editSeq)
+        p = float(len(correct)) / len(editSeq)
     except ZeroDivisionError:
         p = 1.0
     try:
-        r  = float(len(correct)) / len(gold_edits)
+        r = float(len(correct)) / len(gold_edits)
     except ZeroDivisionError:
         r = 1.0
     try:
-        f1 = (1.0+beta*beta) * p * r / (beta*beta*p+r)
-        #f1  = 2.0 * p * r / (p+r)
+        f1 = (1.0 + beta * beta) * p * r / (beta * beta * p + r)
+        # f1  = 2.0 * p * r / (p+r)
     except ZeroDivisionError:
         f1 = 0.0
     if verbose:
-        print "Source:", source.encode("utf8")
-        print "Hypothesis:", candidate.encode("utf8")
-        print "edit seq", editSeq
-        print "gold edits", gold_edits
-        print "correct edits", correct
-        print "p =", p
-        print "r =", r
-        print "f_%.1f =" % beta, f1
-    return (p, r, f1)
+        print("Source:", source.encode("utf8"))
+        print("Hypothesis:", candidate.encode("utf8"))
+        print("edit seq", editSeq)
+        print("gold edits", gold_edits)
+        print("correct edits", correct)
+        print("p =", p)
+        print("r =", r)
+        print("f_%.1f =" % beta, f1)
+    return p, r, f1
+
 
 # distance function
 def get_distance(dist, v1, v2):
@@ -441,8 +469,8 @@ def best_edit_seq_bf(V, E, dist, edits, verby_verbose=False):
     path = {}
     for v in V:
         thisdist[v] = float('inf')
-    thisdist[(0,0)] = 0
-    for i in range(len(V)-1):
+    thisdist[(0, 0)] = 0
+    for i in range(len(V) - 1):
         for edge in E:
             v = edge[0]
             w = edge[1]
@@ -457,7 +485,7 @@ def best_edit_seq_bf(V, E, dist, edits, verby_verbose=False):
             w = path[v]
         except KeyError:
             break
-        edit = edits[(w,v)]
+        edit = edits[(w, v)]
         if edit[0] != 'noop':
             editSeq.append((edit[1], edit[2], edit[3], edit[4]))
         v = w
@@ -504,11 +532,13 @@ def prev_identical_edge(cur, E, edits):
             return e
     return None
 
+
 def next_identical_edge(cur, E, edits):
     for e in E:
         if e[0] == cur[1] and edits[e] == edits[cur]:
             return e
     return None
+
 
 def get_prev_edges(cur, E):
     prev = []
@@ -516,6 +546,7 @@ def get_prev_edges(cur, E):
         if e[0] == cur[1]:
             prev.append(e)
     return prev
+
 
 def get_next_edges(cur, E):
     next = []
@@ -530,9 +561,9 @@ def get_next_edges(cur, E):
 # gold_edits = (start, end, original, correction)
 def set_weights(E, dist, edits, gold_edits, verbose=False, very_verbose=False):
     EPSILON = 0.001
-    if very_verbose:
-        print "set weights of edges()",
-        print "gold edits :", gold_edits
+    # if very_verbose:
+    #     print "set weights of edges()",
+    #     print "gold edits :", gold_edits
 
     gold_set = deepcopy(gold_edits)
     retdist = deepcopy(dist)
@@ -543,59 +574,59 @@ def set_weights(E, dist, edits, gold_edits, verbose=False, very_verbose=False):
         tE = edits[edge]
         s, e = tE[1], tE[2]
         if (s, e) not in M:
-            M[(s,e)] = []
-        M[(s,e)].append(edge)
+            M[(s, e)] = []
+        M[(s, e)].append(edge)
         if (s, e) not in G:
-            G[(s,e)] = []
+            G[(s, e)] = []
 
     for gold in gold_set:
         s, e = gold[0], gold[1]
         if (s, e) not in G:
-            G[(s,e)] = []
-        G[(s,e)].append(gold)
+            G[(s, e)] = []
+        G[(s, e)].append(gold)
 
     for k in sorted(M.keys()):
         M[k] = sorted(M[k])
 
-        if k[0] == k[1]: # insertion case
+        if k[0] == k[1]:  # insertion case
             lptr = 0
-            rptr = len(M[k])-1
+            rptr = len(M[k]) - 1
             cur = lptr
 
             g_lptr = 0
-            g_rptr = len(G[k])-1
+            g_rptr = len(G[k]) - 1
 
             while lptr <= rptr:
                 hasGoldMatch = False
                 edge = M[k][cur]
                 thisEdit = edits[edge]
                 # only check start offset, end offset, original string, corrections
-                if very_verbose:
-                    print "set weights of edge", edge
-                    print "edit  =", thisEdit
+                # if very_verbose:
+                #     print "set weights of edge", edge
+                #     print "edit  =", thisEdit
 
                 cur_gold = []
                 if cur == lptr:
-                    cur_gold = range(g_lptr, g_rptr+1)
+                    cur_gold = range(g_lptr, g_rptr + 1)
                 else:
-                    cur_gold = reversed(range(g_lptr, g_rptr+1))
+                    cur_gold = reversed(range(g_lptr, g_rptr + 1))
 
                 for i in cur_gold:
                     gold = G[k][i]
                     if thisEdit[1] == gold[0] and \
-                        thisEdit[2] == gold[1] and \
-                        thisEdit[3] == gold[2] and \
-                        thisEdit[4] in gold[3]:
+                            thisEdit[2] == gold[1] and \
+                            thisEdit[3] == gold[2] and \
+                            thisEdit[4] in gold[3]:
                         hasGoldMatch = True
                         retdist[edge] = - len(E)
-                        if very_verbose:
-                            print "matched gold edit :", gold
-                            print "set weight to :", retdist[edge]
+                        # if very_verbose:
+                        #     print "matched gold edit :", gold
+                        #     print "set weight to :", retdist[edge]
                         if cur == lptr:
-                            #g_lptr += 1 # why?
+                            # g_lptr += 1 # why?
                             g_lptr = i + 1
                         else:
-                            #g_rptr -= 1 # why?
+                            # g_rptr -= 1 # why?
                             g_rptr = i - 1
                         break
 
@@ -623,49 +654,50 @@ def set_weights(E, dist, edits, gold_edits, verbose=False, very_verbose=False):
                     else:
                         rptr -= 1
                         cur = lptr
-        else: #deletion or substitution, don't care about order, no harm if setting parallel edges weight < 0
+        else:  # deletion or substitution, don't care about order, no harm if setting parallel edges weight < 0
             for edge in M[k]:
                 hasGoldMatch = False
                 thisEdit = edits[edge]
-                if very_verbose:
-                    print "set weights of edge", edge
-                    print "edit  =", thisEdit
+                # if very_verbose:
+                #     print "set weights of edge", edge
+                #     print "edit  =", thisEdit
                 for gold in G[k]:
                     if thisEdit[1] == gold[0] and \
-                        thisEdit[2] == gold[1] and \
-                        thisEdit[3] == gold[2] and \
-                        thisEdit[4] in gold[3]:
+                            thisEdit[2] == gold[1] and \
+                            thisEdit[3] == gold[2] and \
+                            thisEdit[4] in gold[3]:
                         hasGoldMatch = True
                         retdist[edge] = - len(E)
-                        if very_verbose:
-                            print "matched gold edit :", gold
-                            print "set weight to :", retdist[edge]
+                        # if very_verbose:
+                        #     print "matched gold edit :", gold
+                        #     print "set weight to :", retdist[edge]
                         break
                 if not hasGoldMatch and thisEdit[0] != 'noop':
                     retdist[edge] += EPSILON
     return retdist
 
+
 # add transitive arcs
 def transitive_arcs(V, E, dist, edits, max_unchanged_words=2, very_verbose=False):
-    if very_verbose:
-        print "-- Add transitive arcs --"
+    # if very_verbose:
+    #     print "-- Add transitive arcs --"
     for k in range(len(V)):
         vk = V[k]
-        if very_verbose:
-            print "v _k :", vk
+        # if very_verbose:
+        #     print "v _k :", vk
 
         for i in range(len(V)):
             vi = V[i]
-            if very_verbose:
-                print "v _i :", vi
+            # if very_verbose:
+            #     print "v _i :", vi
             try:
                 eik = edits[(vi, vk)]
             except KeyError:
                 continue
             for j in range(len(V)):
                 vj = V[j]
-                if very_verbose:
-                    print "v _j :", vj
+                # if very_verbose:
+                #     print "v _j :", vj
                 try:
                     ekj = edits[(vk, vj)]
                 except KeyError:
@@ -675,28 +707,28 @@ def transitive_arcs(V, E, dist, edits, max_unchanged_words=2, very_verbose=False
                 if dik + dkj < get_distance(dist, vi, vj):
                     eij = merge_edits(eik, ekj)
                     if eij[-1] <= max_unchanged_words:
-                        if very_verbose:
-                            print " add new arcs v_i -> v_j:", eij
+                        # if very_verbose:
+                        #     print " add new arcs v_i -> v_j:", eij
                         E.append((vi, vj))
                         dist[(vi, vj)] = dik + dkj
                         edits[(vi, vj)] = eij
     # remove noop transitive arcs
-    if very_verbose:
-        print "-- Remove transitive noop arcs --"
+    # if very_verbose:
+    #     print "-- Remove transitive noop arcs --"
     for edge in E:
         e = edits[edge]
         if e[0] == 'noop' and dist[edge] > 1:
-            if very_verbose:
-                print " remove noop arc v_i -> vj:", edge
+            # if very_verbose:
+            #     print " remove noop arc v_i -> vj:", edge
             E.remove(edge)
             dist[edge] = float('inf')
             del edits[edge]
-    return(V, E, dist, edits)
+    return V, E, dist, edits
 
 
 # combine two edits into one
 # edit = (type, start, end, orig, correction, #unchanged_words)
-def merge_edits(e1, e2, joiner = ' '):
+def merge_edits(e1, e2, joiner=' '):
     if e1[0] == 'ins':
         if e2[0] == 'ins':
             e = ('ins', e1[1], e2[2], '', e1[4] + joiner + e2[4], e1[5] + e2[5])
@@ -714,7 +746,7 @@ def merge_edits(e1, e2, joiner = ' '):
         elif e2[0] == 'sub':
             e = ('sub', e1[1], e2[2], e1[3] + joiner + e2[3], e2[4], e1[5] + e2[5])
         elif e2[0] == 'noop':
-            e = ('sub', e1[1], e2[2], e1[3] + joiner +  e2[3], e2[4], e1[5] + e2[5])
+            e = ('sub', e1[1], e2[2], e1[3] + joiner + e2[3], e2[4], e1[5] + e2[5])
     elif e1[0] == 'sub':
         if e2[0] == 'ins':
             e = ('sub', e1[1], e2[2], e1[3], e1[4] + joiner + e2[4], e1[5] + e2[5])
@@ -737,6 +769,7 @@ def merge_edits(e1, e2, joiner = ' '):
         assert False
     return e
 
+
 # build edit graph
 def edit_graph(levi_matrix, backpointers):
     V = []
@@ -744,7 +777,7 @@ def edit_graph(levi_matrix, backpointers):
     dist = {}
     edits = {}
     # breath-first search through the matrix
-    v_start = (len(levi_matrix)-1, len(levi_matrix[0])-1)
+    v_start = (len(levi_matrix) - 1, len(levi_matrix[0]) - 1)
     queue = [v_start]
     while len(queue) > 0:
         v = queue[0]
@@ -764,6 +797,7 @@ def edit_graph(levi_matrix, backpointers):
         except KeyError:
             pass
     return (V, E, dist, edits)
+
 
 # merge two lattices, vertices, edges, and distance and edit table
 def merge_graph(V1, V2, E1, E2, dist1, dist2, edits1, edits2):
@@ -801,6 +835,7 @@ def merge_graph(V1, V2, E1, E2, dist1, dist2, edits1, edits2):
                 print >> sys.stderr, "WARNING: merge_graph: edit does not match!"
     return (V, E, dist, edits)
 
+
 # convenience method for levenshtein distance
 def levenshtein_distance(first, second):
     lmatrix, backpointers = levenshtein_matrix(first, second)
@@ -809,7 +844,7 @@ def levenshtein_distance(first, second):
 
 # levenshtein matrix
 def levenshtein_matrix(first, second, cost_ins=1, cost_del=1, cost_sub=2):
-    #if len(second) == 0 or len(second) == 0:
+    # if len(second) == 0 or len(second) == 0:
     #    return len(first) + len(second)
     first_length = len(first) + 1
     second_length = len(second) + 1
@@ -820,46 +855,45 @@ def levenshtein_matrix(first, second, cost_ins=1, cost_del=1, cost_sub=2):
     distance_matrix[0][0] = 0
     for i in range(1, first_length):
         distance_matrix[i][0] = i
-        edit = ("del", i-1, i, first[i-1], '', 0)
-        backpointers[(i, 0)] = [((i-1,0), edit)]
+        edit = ("del", i - 1, i, first[i - 1], '', 0)
+        backpointers[(i, 0)] = [((i - 1, 0), edit)]
     for j in range(1, second_length):
-        distance_matrix[0][j]=j
-        edit = ("ins", 0, 0, '', second[j-1], 0) # always insert from the beginning
-        #edit = ("ins", j-1, j-1, '', second[j-1], 0)
-        backpointers[(0, j)] = [((0,j-1), edit)]
+        distance_matrix[0][j] = j
+        edit = ("ins", 0, 0, '', second[j - 1], 0)  # always insert from the beginning
+        # edit = ("ins", j-1, j-1, '', second[j-1], 0)
+        backpointers[(0, j)] = [((0, j - 1), edit)]
 
     # fill the matrix
-    for i in xrange(1, first_length):
+    for i in range(1, first_length):
         for j in range(1, second_length):
-            deletion = distance_matrix[i-1][j] + cost_del
-            insertion = distance_matrix[i][j-1] + cost_ins
-            if first[i-1] == second[j-1]:
-                substitution = distance_matrix[i-1][j-1]
+            deletion = distance_matrix[i - 1][j] + cost_del
+            insertion = distance_matrix[i][j - 1] + cost_ins
+            if first[i - 1] == second[j - 1]:
+                substitution = distance_matrix[i - 1][j - 1]
             else:
-                substitution = distance_matrix[i-1][j-1] + cost_sub
+                substitution = distance_matrix[i - 1][j - 1] + cost_sub
             if substitution == min(substitution, deletion, insertion):
                 distance_matrix[i][j] = substitution
-                if first[i-1] != second[j-1]:
-                    edit = ("sub", i-1, i, first[i-1], second[j-1], 0)
+                if first[i - 1] != second[j - 1]:
+                    edit = ("sub", i - 1, i, first[i - 1], second[j - 1], 0)
                 else:
-                    edit = ("noop", i-1, i, first[i-1], second[j-1], 1)
+                    edit = ("noop", i - 1, i, first[i - 1], second[j - 1], 1)
                 try:
-                    backpointers[(i, j)].append(((i-1,j-1), edit))
+                    backpointers[(i, j)].append(((i - 1, j - 1), edit))
                 except KeyError:
-                    backpointers[(i, j)] = [((i-1,j-1), edit)]
+                    backpointers[(i, j)] = [((i - 1, j - 1), edit)]
             if deletion == min(substitution, deletion, insertion):
                 distance_matrix[i][j] = deletion
-                edit = ("del", i-1, i, first[i-1], '', 0)
+                edit = ("del", i - 1, i, first[i - 1], '', 0)
                 try:
-                    backpointers[(i, j)].append(((i-1,j), edit))
+                    backpointers[(i, j)].append(((i - 1, j), edit))
                 except KeyError:
-                    backpointers[(i, j)] = [((i-1,j), edit)]
+                    backpointers[(i, j)] = [((i - 1, j), edit)]
             if insertion == min(substitution, deletion, insertion):
                 distance_matrix[i][j] = insertion
-                edit = ("ins", i, i, '', second[j-1], 0)
+                edit = ("ins", i, i, '', second[j - 1], 0)
                 try:
-                    backpointers[(i, j)].append(((i,j-1), edit))
+                    backpointers[(i, j)].append(((i, j - 1), edit))
                 except KeyError:
-                    backpointers[(i, j)] = [((i,j-1), edit)]
-    return (distance_matrix, backpointers)
-
+                    backpointers[(i, j)] = [((i, j - 1), edit)]
+    return distance_matrix, backpointers

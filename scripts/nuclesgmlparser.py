@@ -11,18 +11,32 @@
 # It is free for research and educational purposes.
 
 from sgmllib import SGMLParser
-from nucle_doc import nucle_doc
+
+
+class nucle_doc:
+    def __init__(self):
+        self.docattrs = None
+        self.matric = None
+        self.email = None
+        self.nationality = None
+        self.firstLanguage = None
+        self.schoolLanguage = None
+        self.englishTests = None
+        self.paragraphs = []
+        self.annotation = []
+        self.mistakes = []
 
 
 class nuclesgmlparser(SGMLParser):
     def __init__(self):
-        SGMLParser.__init__(self)
+        super().__init__()
         self.docs = []
+        self.data = []
 
     def reset(self):
         self.docs = []
         self.data = []
-        SGMLParser.reset(self)
+        super().reset()
 
     def unknow_starttag(self, tag, attrs):
         pass
@@ -43,7 +57,6 @@ class nuclesgmlparser(SGMLParser):
     def end_matric(self):
         self.docs[-1].matric = ''.join(self.data)
         self.data = []
-        pass
 
     def start_email(self, attrs):
         pass
@@ -51,7 +64,6 @@ class nuclesgmlparser(SGMLParser):
     def end_email(self):
         self.docs[-1].email = ''.join(self.data)
         self.data = []
-        pass
 
     def start_nationality(self, attrs):
         pass
@@ -59,7 +71,6 @@ class nuclesgmlparser(SGMLParser):
     def end_nationality(self):
         self.docs[-1].nationality = ''.join(self.data)
         self.data = []
-        pass
 
     def start_first_language(self, attrs):
         pass
@@ -67,7 +78,6 @@ class nuclesgmlparser(SGMLParser):
     def end_first_language(self):
         self.docs[-1].firstLanguage = ''.join(self.data)
         self.data = []
-        pass
 
     def start_school_language(self, attrs):
         pass
@@ -75,7 +85,6 @@ class nuclesgmlparser(SGMLParser):
     def end_school_language(self):
         self.docs[-1].schoolLanguage = ''.join(self.data)
         self.data = []
-        pass
 
     def start_english_tests(self, attrs):
         pass
@@ -83,12 +92,10 @@ class nuclesgmlparser(SGMLParser):
     def end_english_tests(self):
         self.docs[-1].englishTests = ''.join(self.data)
         self.data = []
-        pass
-
 
     def start_text(self, attrs):
         pass
-    
+
     def end_text(self):
         pass
 
@@ -98,8 +105,6 @@ class nuclesgmlparser(SGMLParser):
     def end_title(self):
         self.docs[-1].paragraphs.append(''.join(self.data))
         self.data = []
-        pass
-
 
     def start_p(self, attrs):
         pass
@@ -107,8 +112,6 @@ class nuclesgmlparser(SGMLParser):
     def end_p(self):
         self.docs[-1].paragraphs.append(''.join(self.data))
         self.data = []
-        pass
-
 
     def start_annotation(self, attrs):
         self.docs[-1].annotation.append(attrs)
@@ -121,10 +124,9 @@ class nuclesgmlparser(SGMLParser):
         for t in attrs:
             d[t[0]] = int(t[1])
         self.docs[-1].mistakes.append(d)
-        pass 
 
     def end_mistake(self):
-        pass 
+        pass
 
     def start_type(self, attrs):
         pass
@@ -144,25 +146,23 @@ class nuclesgmlparser(SGMLParser):
         pass
 
     def end_comment(self):
-        self.docs[-1].mistakes[-1]['comment'] = ''.join( self.data)
+        self.docs[-1].mistakes[-1]['comment'] = ''.join(self.data)
         self.data = []
 
-
     def handle_charref(self, ref):
-        self.data.append('&' + ref)
+        self.data.append(f'&{ref}')
 
     def handle_entityref(self, ref):
-        self.data.append('&' + ref)
+        self.data.append(f'&{ref}')
 
     def handle_data(self, text):
-        if  text.strip() == '':
+        text = text.strip()
+        if not text:
             self.data.append('')
             return
-        else:
-            if text.startswith('\n'):
-                text = text[1:]
-            if text.endswith('\n'):
-                text = text[:-1]
-            self.data.append(text)
 
-
+        if text.startswith('\n'):
+            text = text[1:]
+        if text.endswith('\n'):
+            text = text[:-1]
+        self.data.append(text)
